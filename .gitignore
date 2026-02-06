@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Build output
+Caffeinate Toggle.app/
+AppIcon.iconset/
+CaffeinateAppTests
+
+# Claude Code
+.claude/
