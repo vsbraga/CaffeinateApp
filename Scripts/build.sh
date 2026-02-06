@@ -48,6 +48,10 @@ swiftc Sources/*.swift \
 cp Resources/Info.plist "Caffeinate Toggle.app/Contents/"
 cp Resources/AppIcon.icns "Caffeinate Toggle.app/Contents/Resources/"
 
+# Run tests
+echo ""
+"$SCRIPT_DIR/run_tests.sh"
+
 echo ""
 echo "✅ Build successful!"
 echo ""
