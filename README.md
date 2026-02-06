@@ -4,7 +4,7 @@ A lightweight macOS menu bar app that prevents your Mac from sleeping with a sin
 
 ![macOS](https://img.shields.io/badge/macOS-12.0%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5-orange)
-![License](https://img.shields.io/badge/license-MIT-green)
+![License](https://img.shields.io/badge/license-GPL%20v3-green)
 
 ## What it does
 
@@ -30,8 +30,8 @@ Requires macOS 12.0+ and Xcode Command Line Tools.
 ```bash
 git clone https://github.com/vsbraga/CaffeinateApp.git
 cd CaffeinateApp
-chmod +x build.sh
-./build.sh
+chmod +x Scripts/build.sh
+Scripts/build.sh
 ```
 
 Then move the app to your Applications folder:
@@ -72,12 +72,34 @@ The app spawns `/usr/bin/caffeinate -d` as a child process to prevent display sl
 
 ```
 CaffeinateApp/
-  CaffeinateApp.swift   # Single-file Swift app (all logic)
-  Info.plist             # App bundle metadata
-  AppIcon.icns           # Application icon
-  build.sh               # Build script (no Xcode required)
-  media/                 # Source icon files (PNG, SVG, ICO)
+  Sources/
+    main.swift                  # App entry point
+    AppDelegate.swift           # App coordinator
+    Constants.swift             # Centralized constants
+    CaffeinateManager.swift     # Caffeinate process lifecycle
+    IconRenderer.swift          # Menu bar icon drawing
+    StatusBarController.swift   # Status item and menu
+    AboutWindowController.swift # About dialog
+    SettingsController.swift    # Settings dialog
+  Tests/
+    TestFramework.swift         # Lightweight test framework
+    CaffeinateAppTests.swift    # Unit tests (57 tests)
+  Resources/
+    Info.plist                  # App bundle metadata
+    AppIcon.icns                # Application icon
+  Scripts/
+    build.sh                    # Build script (no Xcode required)
+    run_tests.sh                # Test runner
+  media/                        # Source icon files (PNG, SVG, ICO)
   README.md
+  LICENSE
+```
+
+## Running tests
+
+```bash
+chmod +x Scripts/run_tests.sh
+Scripts/run_tests.sh
 ```
 
 ## Requirements
@@ -99,4 +121,4 @@ If you find this app useful, consider buying me a coffee:
 
 ## License
 
-This project is open source. See the [repository](https://github.com/vsbraga/CaffeinateApp) for details.
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.

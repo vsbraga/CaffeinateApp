@@ -1,8 +1,13 @@
 #!/bin/bash
 # Build script for Caffeinate Toggle menu bar app
-# Run this on your Mac: chmod +x build.sh && ./build.sh
+# Run from project root: chmod +x Scripts/build.sh && Scripts/build.sh
 
 set -e
+
+# Resolve project root (parent of Scripts/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
 
 echo "🔨 Building Caffeinate Toggle..."
 
@@ -10,7 +15,7 @@ echo "🔨 Building Caffeinate Toggle..."
 rm -rf "Caffeinate Toggle.app"
 
 # Generate app icon if .icns is missing
-if [ ! -f AppIcon.icns ]; then
+if [ ! -f Resources/AppIcon.icns ]; then
     echo "🖼  Generating AppIcon.icns from media/CaffeinateIcon.png..."
     SRC="media/CaffeinateIcon.png"
     DEST="AppIcon.iconset"
@@ -25,7 +30,7 @@ if [ ! -f AppIcon.icns ]; then
     sips -z 512 512   "$SRC" --out "$DEST/icon_256x256@2x.png" > /dev/null
     sips -z 512 512   "$SRC" --out "$DEST/icon_512x512.png"    > /dev/null
     sips -z 1024 1024 "$SRC" --out "$DEST/icon_512x512@2x.png" > /dev/null
-    iconutil -c icns "$DEST" -o AppIcon.icns
+    iconutil -c icns "$DEST" -o Resources/AppIcon.icns
     rm -rf "$DEST"
 fi
 
@@ -33,15 +38,15 @@ fi
 mkdir -p "Caffeinate Toggle.app/Contents/MacOS"
 mkdir -p "Caffeinate Toggle.app/Contents/Resources"
 
-# Compile Swift source
-swiftc CaffeinateApp.swift main.swift \
+# Compile all Swift sources
+swiftc Sources/*.swift \
     -o "Caffeinate Toggle.app/Contents/MacOS/CaffeinateApp" \
     -framework Cocoa \
     -O
 
 # Copy Info.plist and app icon
-cp Info.plist "Caffeinate Toggle.app/Contents/"
-cp AppIcon.icns "Caffeinate Toggle.app/Contents/Resources/"
+cp Resources/Info.plist "Caffeinate Toggle.app/Contents/"
+cp Resources/AppIcon.icns "Caffeinate Toggle.app/Contents/Resources/"
 
 echo ""
 echo "✅ Build successful!"
