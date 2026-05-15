@@ -590,8 +590,11 @@ describe("UserActivitySimulator") {
         try assertEqual(Constants.UserActivity.interval, 240)
     }
 
-    it("uses -u and -t 5 arguments") {
-        try assertEqual(Constants.UserActivity.arguments, ["-u", "-t", "5"])
+    it("stop after start leaves isActive false") {
+        let s = UserActivitySimulator()
+        s.start()
+        s.stop()
+        try assertFalse(s.isActive)
     }
 }
 

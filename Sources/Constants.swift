@@ -62,7 +62,6 @@ enum Constants {
     enum UserActivity {
         // Fire every 4 minutes — under Teams' 5-minute idle threshold
         static let interval: TimeInterval = 240
-        static let arguments = ["-u", "-t", "5"]
     }
 
     // MARK: - Menu
