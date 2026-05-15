@@ -11,9 +11,14 @@ A lightweight macOS menu bar app that prevents your Mac from sleeping with a sin
 Caffeinate Toggle is a simple menu bar utility that wraps the built-in macOS `caffeinate` command. It lets you quickly toggle sleep prevention on or off without opening a terminal.
 
 - Prevents display sleep when active (`caffeinate -d`)
+- Keeps MS Teams (and similar apps) status **Available** — never goes Away or Offline
 - Lives entirely in the menu bar — no Dock icon, no windows
 - Status indicator dot shows green (active) or red (inactive)
 - Launch at startup option via Settings
+
+### Teams keep-alive
+
+When the toggle is on, the app declares user activity to the system every 4 minutes using `caffeinate -u`. This resets the OS idle timer that Teams monitors to detect inactivity, preventing your status from changing to Away. It requires no special permissions and works regardless of whether Teams is in the foreground.
 
 ## Screenshots
 
@@ -56,17 +61,22 @@ Or manually: **System Settings > General > Login Items > add Caffeinate Toggle**
 
 | Option | Description |
 |---|---|
-| **Turn On / Turn Off** | Toggle the `caffeinate -d` process |
+| **Turn On / Turn Off** | Toggle sleep prevention and Teams keep-alive |
 | **Settings...** | Configure launch at startup |
 | **About** | App version, author info, and links |
 | **Quit** | Stop caffeinate and exit the app |
 
 ## How it works
 
-The app spawns `/usr/bin/caffeinate -d` as a child process to prevent display sleep. When toggled off (or when the app quits), it terminates that process. The menu bar icon shows a coffee cup with a small colored dot:
+When toggled on, the app does two things:
 
-- **Green dot** — caffeinate is running, your Mac won't sleep
-- **Red dot** — caffeinate is off, normal sleep behavior
+1. Spawns `/usr/bin/caffeinate -d` to prevent display sleep.
+2. Starts a timer that runs `/usr/bin/caffeinate -u -t 5` every 4 minutes, declaring user activity to the OS. This resets the system idle timer before Teams' 5-minute Away threshold fires.
+
+Both are stopped when you toggle off or quit the app. The menu bar icon shows a coffee cup with a small colored dot:
+
+- **Green dot** — active: display sleep blocked, Teams kept Available
+- **Red dot** — inactive: normal sleep and presence behavior
 
 ## Project structure
 
@@ -77,13 +87,14 @@ CaffeinateApp/
     AppDelegate.swift           # App coordinator
     Constants.swift             # Centralized constants
     CaffeinateManager.swift     # Caffeinate process lifecycle
+    UserActivitySimulator.swift # Teams keep-alive timer
     IconRenderer.swift          # Menu bar icon drawing
     StatusBarController.swift   # Status item and menu
     AboutWindowController.swift # About dialog
     SettingsController.swift    # Settings dialog
   Tests/
     TestFramework.swift         # Lightweight test framework
-    CaffeinateAppTests.swift    # Unit tests (57 tests)
+    CaffeinateAppTests.swift    # Unit tests (66 tests)
   Resources/
     Info.plist                  # App bundle metadata
     AppIcon.icns                # Application icon
