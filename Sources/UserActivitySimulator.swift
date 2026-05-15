@@ -14,6 +14,7 @@ class UserActivitySimulator {
     var postEvent: () -> Void = { UserActivitySimulator.postMouseEvent() }
 
     private var timer: Timer?
+    private var hasRequestedPermission = false
     var isActive: Bool { timer != nil }
 
     func start() {
@@ -33,6 +34,8 @@ class UserActivitySimulator {
 
     private func requestAccessibilityIfNeeded() {
         guard !isTrusted() else { return }
+        guard !hasRequestedPermission else { return }
+        hasRequestedPermission = true
         requestPermission()
     }
 

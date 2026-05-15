@@ -712,6 +712,18 @@ describe("UserActivitySimulator: Branches") {
         s.stop()
     }
 
+    it("requests permission only once across multiple start/stop cycles") {
+        let s = UserActivitySimulator()
+        var count = 0
+        s.isTrusted = { false }
+        s.requestPermission = { count += 1 }
+        s.postEvent = { }
+        s.start(); s.stop()
+        s.start(); s.stop()
+        s.start(); s.stop()
+        try assertEqual(count, 1, "Permission dialog should appear at most once per session")
+    }
+
     it("timer fires event on each tick when trusted") {
         let s = UserActivitySimulator()
         var count = 0
