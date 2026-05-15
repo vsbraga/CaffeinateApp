@@ -2,14 +2,18 @@ import Foundation
 import CoreGraphics
 import AppKit
 
-// Resets the HIDIdleTime counter (what Teams reads) by posting a synthetic
-// mouse-moved event at the current cursor position every 4 minutes.
-// caffeinate -u is NOT sufficient — it only affects the power management
-// sleep timer, not the HID idle counter Teams monitors.
+// Resets HIDIdleTime (what Teams/Electron reads) by posting a synthetic
+// mouse-moved CGEvent at the current cursor position every 4 minutes.
+// caffeinate -u is NOT sufficient — it only resets the power-management
+// sleep timer, not the HID idle counter Teams monitors via IOKit.
 // Requires Accessibility permission (Privacy & Security > Accessibility).
 class UserActivitySimulator {
-    private var timer: Timer?
+    // Overridable for testing
+    var isTrusted: () -> Bool = { AXIsProcessTrusted() }
+    var requestPermission: () -> Void = { UserActivitySimulator.showPermissionAlert() }
+    var postEvent: () -> Void = { UserActivitySimulator.postMouseEvent() }
 
+    private var timer: Timer?
     var isActive: Bool { timer != nil }
 
     func start() {
@@ -28,7 +32,16 @@ class UserActivitySimulator {
     }
 
     private func requestAccessibilityIfNeeded() {
-        guard !AXIsProcessTrusted() else { return }
+        guard !isTrusted() else { return }
+        requestPermission()
+    }
+
+    private func fireActivity() {
+        guard isTrusted() else { return }
+        postEvent()
+    }
+
+    private static func showPermissionAlert() {
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = "Accessibility Permission Needed"
@@ -44,8 +57,7 @@ class UserActivitySimulator {
         }
     }
 
-    private func fireActivity() {
-        guard AXIsProcessTrusted() else { return }
+    private static func postMouseEvent() {
         let screenHeight = NSScreen.main?.frame.height ?? 0
         let mousePos = NSEvent.mouseLocation
         let point = CGPoint(x: mousePos.x, y: screenHeight - mousePos.y)

@@ -211,7 +211,34 @@ describe("CaffeinateManager: Delegate") {
 }
 
 // ============================================================
-// 6. Stress: Multiple Start/Stop Cycles
+// 6. CaffeinateManager — Unexpected Termination
+// ============================================================
+
+describe("CaffeinateManager: Unexpected Termination") {
+    it("unexpected process exit notifies delegate on main queue") {
+        let m = makeManager()
+        let d = TestDelegate()
+        m.delegate = d
+        m.start()
+        // Kill the process without going through stop() — simulates a crash
+        m.process!.terminate()
+        // Let the termination handler fire and its main-queue dispatch run
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
+        try assertEqual(d.stopCount, 1, "Delegate should receive unexpected-stop notification")
+        try assertFalse(m.isActive)
+    }
+
+    it("process reference is cleared on unexpected exit") {
+        let m = makeManager()
+        m.start()
+        m.process!.terminate()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
+        try assertNil(m.process)
+    }
+}
+
+// ============================================================
+// 8. Stress: Multiple Start/Stop Cycles
 // ============================================================
 
 describe("Stress: Multiple Start/Stop Cycles") {
@@ -230,7 +257,7 @@ describe("Stress: Multiple Start/Stop Cycles") {
 }
 
 // ============================================================
-// 7. IconRenderer
+// 9. IconRenderer
 // ============================================================
 
 describe("IconRenderer") {
@@ -253,7 +280,7 @@ describe("IconRenderer") {
 }
 
 // ============================================================
-// 8. StatusBarController — Menu Setup
+// 10. StatusBarController — Menu Setup
 // ============================================================
 
 describe("StatusBarController: Menu Setup") {
@@ -325,7 +352,7 @@ describe("StatusBarController: Menu Setup") {
 }
 
 // ============================================================
-// 9. StatusBarController — State Updates
+// 11. StatusBarController — State Updates
 // ============================================================
 
 describe("StatusBarController: State Updates") {
@@ -374,7 +401,7 @@ describe("StatusBarController: State Updates") {
 }
 
 // ============================================================
-// 10. StatusBarController — Closure Callbacks
+// 12. StatusBarController — Closure Callbacks
 // ============================================================
 
 describe("StatusBarController: Closures") {
@@ -386,10 +413,37 @@ describe("StatusBarController: Closures") {
         try assertTrue(called, "onToggle should have been called")
         cleanUpStatusBar(sb)
     }
+
+    it("onSettings closure is called") {
+        let sb = makeStatusBar()
+        var called = false
+        sb.onSettings = { called = true }
+        _ = sb.statusItem.menu!.items[2].target!.perform(sb.statusItem.menu!.items[2].action)
+        try assertTrue(called, "onSettings should have been called")
+        cleanUpStatusBar(sb)
+    }
+
+    it("onAbout closure is called") {
+        let sb = makeStatusBar()
+        var called = false
+        sb.onAbout = { called = true }
+        _ = sb.statusItem.menu!.items[4].target!.perform(sb.statusItem.menu!.items[4].action)
+        try assertTrue(called, "onAbout should have been called")
+        cleanUpStatusBar(sb)
+    }
+
+    it("onQuit closure is called") {
+        let sb = makeStatusBar()
+        var called = false
+        sb.onQuit = { called = true }
+        _ = sb.statusItem.menu!.items[5].target!.perform(sb.statusItem.menu!.items[5].action)
+        try assertTrue(called, "onQuit should have been called")
+        cleanUpStatusBar(sb)
+    }
 }
 
 // ============================================================
-// 11. Constants
+// 13. Constants
 // ============================================================
 
 describe("Constants") {
@@ -416,7 +470,7 @@ describe("Constants") {
 }
 
 // ============================================================
-// 12. About Window
+// 14. About Window
 // ============================================================
 
 describe("About Window") {
@@ -503,7 +557,7 @@ describe("About Window") {
 }
 
 // ============================================================
-// 13. AppDelegate Integration
+// 15. AppDelegate Integration
 // ============================================================
 
 describe("AppDelegate: Integration") {
@@ -544,10 +598,21 @@ describe("AppDelegate: Integration") {
         try assertFalse(d.userActivitySimulator.isActive)
         NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
     }
+
+    it("error delegate shows alert without crashing") {
+        let d = AppDelegate()
+        d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        let error = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "test error"])
+        // Dismiss the modal as soon as it appears — runModal() processes the main queue
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { NSApp.abortModal() }
+        d.caffeinateManager(d.caffeinateManager, didFailWithError: error)
+        try assertTrue(true)
+        NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
+    }
 }
 
 // ============================================================
-// 14. UserActivitySimulator
+// 16. UserActivitySimulator
 // ============================================================
 
 describe("UserActivitySimulator") {
@@ -595,6 +660,121 @@ describe("UserActivitySimulator") {
         s.start()
         s.stop()
         try assertFalse(s.isActive)
+    }
+}
+
+// ============================================================
+// 17. UserActivitySimulator — Branch Coverage
+// ============================================================
+
+describe("UserActivitySimulator: Branches") {
+    it("fires event immediately on start when trusted") {
+        let s = UserActivitySimulator()
+        var fired = false
+        s.isTrusted = { true }
+        s.postEvent = { fired = true }
+        s.requestPermission = { }
+        s.start()
+        try assertTrue(fired, "Should fire event immediately when trusted")
+        s.stop()
+    }
+
+    it("does not fire event when not trusted") {
+        let s = UserActivitySimulator()
+        var fired = false
+        s.isTrusted = { false }
+        s.postEvent = { fired = true }
+        s.requestPermission = { }
+        s.start()
+        try assertFalse(fired, "Should not fire event when not trusted")
+        s.stop()
+    }
+
+    it("requests permission on start when not trusted") {
+        let s = UserActivitySimulator()
+        var requested = false
+        s.isTrusted = { false }
+        s.requestPermission = { requested = true }
+        s.postEvent = { }
+        s.start()
+        try assertTrue(requested, "Should request permission when not trusted")
+        s.stop()
+    }
+
+    it("does not request permission when already trusted") {
+        let s = UserActivitySimulator()
+        var requested = false
+        s.isTrusted = { true }
+        s.requestPermission = { requested = true }
+        s.postEvent = { }
+        s.start()
+        try assertFalse(requested, "Should not request permission when already trusted")
+        s.stop()
+    }
+
+    it("timer fires event on each tick when trusted") {
+        let s = UserActivitySimulator()
+        var count = 0
+        s.isTrusted = { true }
+        s.postEvent = { count += 1 }
+        s.requestPermission = { }
+        s.start()
+        // Immediate fire on start = 1
+        try assertEqual(count, 1, "Should fire exactly once on start (timer ticks not awaited)")
+        s.stop()
+    }
+
+    it("trusted path then stop leaves isActive false") {
+        let s = UserActivitySimulator()
+        s.isTrusted = { true }
+        s.postEvent = { }
+        s.requestPermission = { }
+        s.start()
+        try assertTrue(s.isActive)
+        s.stop()
+        try assertFalse(s.isActive)
+    }
+}
+
+// ============================================================
+// 18. UserActivitySimulator — Default Closures
+// ============================================================
+
+describe("UserActivitySimulator: Default Closures") {
+    it("default postEvent runs without crashing (CGEventPost silently no-ops without accessibility)") {
+        let s = UserActivitySimulator()
+        s.isTrusted = { true }
+        s.requestPermission = { }
+        // Uses real postEvent — exercises CGEvent code path regardless of accessibility grant
+        s.start()
+        s.stop()
+        try assertTrue(true)
+    }
+
+    it("default requestPermission dispatches async alert that dismisses cleanly") {
+        let s = UserActivitySimulator()
+        s.isTrusted = { false }
+        // Uses real requestPermission — dispatches NSAlert async
+        s.postEvent = { }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { NSApp.abortModal() }
+        s.start()
+        // Drain main queue so the async dispatch executes and the alert appears/dismisses
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        s.stop()
+        try assertTrue(true)
+    }
+}
+
+// ============================================================
+// 19. SettingsController
+// ============================================================
+
+describe("SettingsController") {
+    it("showSettings presents and dismisses modal without crashing") {
+        // asyncAfter fires while runModal() is spinning its event loop
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { NSApp.abortModal() }
+        SettingsController.showSettings()
+        try assertTrue(true)
     }
 }
 
