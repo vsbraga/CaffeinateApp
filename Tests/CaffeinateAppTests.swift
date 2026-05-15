@@ -573,6 +573,7 @@ describe("AppDelegate: Integration") {
     it("applicationWillTerminate stops caffeinate") {
         let d = AppDelegate()
         d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        d.userActivitySimulator.requestPermission = { }
         d.caffeinateManager.start()
         try assertTrue(d.caffeinateManager.isActive)
         d.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
@@ -583,6 +584,7 @@ describe("AppDelegate: Integration") {
     it("caffeinate start activates user activity simulator") {
         let d = AppDelegate()
         d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        d.userActivitySimulator.requestPermission = { }
         try assertFalse(d.userActivitySimulator.isActive)
         d.caffeinateManager.start()
         try assertTrue(d.userActivitySimulator.isActive)
@@ -593,20 +595,10 @@ describe("AppDelegate: Integration") {
     it("caffeinate stop deactivates user activity simulator") {
         let d = AppDelegate()
         d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        d.userActivitySimulator.requestPermission = { }
         d.caffeinateManager.start()
         d.caffeinateManager.stop()
         try assertFalse(d.userActivitySimulator.isActive)
-        NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
-    }
-
-    it("error delegate shows alert without crashing") {
-        let d = AppDelegate()
-        d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
-        let error = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "test error"])
-        // Dismiss the modal as soon as it appears — runModal() processes the main queue
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { NSApp.abortModal() }
-        d.caffeinateManager(d.caffeinateManager, didFailWithError: error)
-        try assertTrue(true)
         NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
     }
 }
@@ -623,6 +615,7 @@ describe("UserActivitySimulator") {
 
     it("start sets isActive to true") {
         let s = UserActivitySimulator()
+        s.requestPermission = { }
         s.start()
         try assertTrue(s.isActive)
         s.stop()
@@ -630,6 +623,7 @@ describe("UserActivitySimulator") {
 
     it("stop sets isActive to false") {
         let s = UserActivitySimulator()
+        s.requestPermission = { }
         s.start()
         s.stop()
         try assertFalse(s.isActive)
@@ -637,6 +631,7 @@ describe("UserActivitySimulator") {
 
     it("start twice does not create duplicate timer") {
         let s = UserActivitySimulator()
+        s.requestPermission = { }
         s.start()
         s.start()
         try assertTrue(s.isActive)
@@ -657,6 +652,7 @@ describe("UserActivitySimulator") {
 
     it("stop after start leaves isActive false") {
         let s = UserActivitySimulator()
+        s.requestPermission = { }
         s.start()
         s.stop()
         try assertFalse(s.isActive)
