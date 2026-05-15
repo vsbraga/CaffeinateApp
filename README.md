@@ -6,6 +6,7 @@ A lightweight macOS menu bar app that prevents your Mac from sleeping with a sin
 ![Swift](https://img.shields.io/badge/Swift-5-orange)
 ![License](https://img.shields.io/badge/license-GPL%20v3-green)
 ![Version](https://img.shields.io/badge/version-1.1-brightgreen)
+[![Download](https://img.shields.io/github/downloads/vsbraga/CaffeinateApp/total?label=downloads&color=brightgreen)](https://github.com/vsbraga/CaffeinateApp/releases/latest)
 
 ## What it does
 
@@ -30,6 +31,16 @@ When the toggle is on, the app posts a synthetic mouse-moved `CGEvent` at the cu
 | Coffee cup with status dot | Turn On/Off, Settings, About, Quit |
 
 ## Installation
+
+### Download (recommended)
+
+**[Download Caffeinate Toggle v1.1](https://github.com/vsbraga/CaffeinateApp/releases/latest/download/Caffeinate.Toggle.v1.1.zip)**
+
+1. Unzip the file
+2. Move `Caffeinate Toggle.app` to your `/Applications` folder
+3. Double-click to launch — a coffee cup icon will appear in your menu bar
+
+> **First launch:** macOS may warn that the app is from an unidentified developer (it's not notarized). Right-click the app → **Open** → **Open** to bypass it. You only need to do this once.
 
 ### Build from source
 
