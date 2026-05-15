@@ -3,6 +3,7 @@ import Cocoa
 class AppDelegate: NSObject, NSApplicationDelegate, CaffeinateManagerDelegate {
     private(set) var statusBar: StatusBarController!
     private(set) var caffeinateManager = CaffeinateManager()
+    private(set) var userActivitySimulator = UserActivitySimulator()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         caffeinateManager.delegate = self
@@ -18,10 +19,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, CaffeinateManagerDelegate {
 
     func caffeinateManagerDidStart(_ manager: CaffeinateManager) {
         statusBar.updateState(isActive: true)
+        userActivitySimulator.start()
     }
 
     func caffeinateManagerDidStop(_ manager: CaffeinateManager) {
         statusBar.updateState(isActive: false)
+        userActivitySimulator.stop()
     }
 
     func caffeinateManager(_ manager: CaffeinateManager, didFailWithError error: Error) {

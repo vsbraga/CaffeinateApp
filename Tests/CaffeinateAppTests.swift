@@ -525,6 +525,74 @@ describe("AppDelegate: Integration") {
         try assertFalse(d.caffeinateManager.isActive)
         NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
     }
+
+    it("caffeinate start activates user activity simulator") {
+        let d = AppDelegate()
+        d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        try assertFalse(d.userActivitySimulator.isActive)
+        d.caffeinateManager.start()
+        try assertTrue(d.userActivitySimulator.isActive)
+        d.caffeinateManager.stop()
+        NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
+    }
+
+    it("caffeinate stop deactivates user activity simulator") {
+        let d = AppDelegate()
+        d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
+        d.caffeinateManager.start()
+        d.caffeinateManager.stop()
+        try assertFalse(d.userActivitySimulator.isActive)
+        NSStatusBar.system.removeStatusItem(d.statusBar.statusItem)
+    }
+}
+
+// ============================================================
+// 14. UserActivitySimulator
+// ============================================================
+
+describe("UserActivitySimulator") {
+    it("isActive is false on init") {
+        let s = UserActivitySimulator()
+        try assertFalse(s.isActive)
+    }
+
+    it("start sets isActive to true") {
+        let s = UserActivitySimulator()
+        s.start()
+        try assertTrue(s.isActive)
+        s.stop()
+    }
+
+    it("stop sets isActive to false") {
+        let s = UserActivitySimulator()
+        s.start()
+        s.stop()
+        try assertFalse(s.isActive)
+    }
+
+    it("start twice does not create duplicate timer") {
+        let s = UserActivitySimulator()
+        s.start()
+        s.start()
+        try assertTrue(s.isActive)
+        s.stop()
+        try assertFalse(s.isActive)
+    }
+
+    it("stop when already stopped does not crash") {
+        let s = UserActivitySimulator()
+        s.stop()
+        s.stop()
+        try assertFalse(s.isActive)
+    }
+
+    it("interval is 240 seconds") {
+        try assertEqual(Constants.UserActivity.interval, 240)
+    }
+
+    it("uses -u and -t 5 arguments") {
+        try assertEqual(Constants.UserActivity.arguments, ["-u", "-t", "5"])
+    }
 }
 
 // ============================================================

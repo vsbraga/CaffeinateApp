@@ -21,6 +21,7 @@ cat Tests/TestFramework.swift Tests/CaffeinateAppTests.swift > "$TMPDIR/main.swi
 swiftc \
     Sources/Constants.swift \
     Sources/CaffeinateManager.swift \
+    Sources/UserActivitySimulator.swift \
     Sources/IconRenderer.swift \
     Sources/StatusBarController.swift \
     Sources/AboutWindowController.swift \
