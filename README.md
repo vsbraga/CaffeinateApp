@@ -5,6 +5,7 @@ A lightweight macOS menu bar app that prevents your Mac from sleeping with a sin
 ![macOS](https://img.shields.io/badge/macOS-12.0%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5-orange)
 ![License](https://img.shields.io/badge/license-GPL%20v3-green)
+![Version](https://img.shields.io/badge/version-1.1-brightgreen)
 
 ## What it does
 
@@ -18,7 +19,9 @@ Caffeinate Toggle is a simple menu bar utility that wraps the built-in macOS `ca
 
 ### Teams keep-alive
 
-When the toggle is on, the app declares user activity to the system every 4 minutes using `caffeinate -u`. This resets the OS idle timer that Teams monitors to detect inactivity, preventing your status from changing to Away. It requires no special permissions and works regardless of whether Teams is in the foreground.
+When the toggle is on, the app posts a synthetic mouse-moved `CGEvent` at the current cursor position every 4 minutes. This resets `HIDIdleTime` — the IOKit idle counter that Teams/Electron reads to detect inactivity — keeping your status Available without visibly moving the cursor.
+
+> **Accessibility permission required.** On first use, the app will prompt you to grant access under **System Settings › Privacy & Security › Accessibility**. This is required because `CGEventPost` is the only reliable way to reset `HIDIdleTime`. The prompt appears at most once per app session.
 
 ## Screenshots
 
@@ -42,14 +45,9 @@ Scripts/build.sh
 Then move the app to your Applications folder:
 
 ```bash
-mv "Caffeinate Toggle.app" /Applications/
+cp -r "Caffeinate Toggle.app" /Applications/
+open /Applications/Caffeinate\ Toggle.app
 ```
-
-### Launch
-
-1. Open **Caffeinate Toggle** from `/Applications` (or double-click the `.app`)
-2. A coffee cup icon will appear in your menu bar
-3. Click the icon to toggle sleep prevention on/off
 
 ### Auto-start on login
 
@@ -71,12 +69,16 @@ Or manually: **System Settings > General > Login Items > add Caffeinate Toggle**
 When toggled on, the app does two things:
 
 1. Spawns `/usr/bin/caffeinate -d` to prevent display sleep.
-2. Starts a timer that runs `/usr/bin/caffeinate -u -t 5` every 4 minutes, declaring user activity to the OS. This resets the system idle timer before Teams' 5-minute Away threshold fires.
+2. Starts a timer that posts a `CGEvent` of type `mouseMoved` at the current cursor position every 4 minutes. This resets `HIDIdleTime` in IOKit — the counter Teams/Electron reads via `IOHIDSystem` to detect user inactivity. The cursor does not visibly move.
 
 Both are stopped when you toggle off or quit the app. The menu bar icon shows a coffee cup with a small colored dot:
 
 - **Green dot** — active: display sleep blocked, Teams kept Available
 - **Red dot** — inactive: normal sleep and presence behavior
+
+### Why not `caffeinate -u`?
+
+`caffeinate -u` calls `IOPMAssertionDeclareUserActivity`, which only affects the power management sleep timer. Teams reads `HIDIdleTime` directly via IOKit, which is only reset by actual input events — hence the `CGEvent` approach.
 
 ## Project structure
 
@@ -87,20 +89,21 @@ CaffeinateApp/
     AppDelegate.swift           # App coordinator
     Constants.swift             # Centralized constants
     CaffeinateManager.swift     # Caffeinate process lifecycle
-    UserActivitySimulator.swift # Teams keep-alive timer
+    UserActivitySimulator.swift # Teams keep-alive (CGEvent every 4 min)
     IconRenderer.swift          # Menu bar icon drawing
     StatusBarController.swift   # Status item and menu
     AboutWindowController.swift # About dialog
     SettingsController.swift    # Settings dialog
   Tests/
     TestFramework.swift         # Lightweight test framework
-    CaffeinateAppTests.swift    # Unit tests (66 tests)
+    CaffeinateAppTests.swift    # Unit tests (81 tests, 93.93% line coverage)
   Resources/
     Info.plist                  # App bundle metadata
     AppIcon.icns                # Application icon
   Scripts/
     build.sh                    # Build script (no Xcode required)
     run_tests.sh                # Test runner
+    coverage.sh                 # LLVM line/function/region coverage report
   media/                        # Source icon files (PNG, SVG, ICO)
   README.md
   LICENSE
@@ -113,10 +116,20 @@ chmod +x Scripts/run_tests.sh
 Scripts/run_tests.sh
 ```
 
+## Code coverage
+
+```bash
+chmod +x Scripts/coverage.sh
+Scripts/coverage.sh
+```
+
+Generates a per-file line/function/region report using LLVM instrumentation. Current coverage: **93.93% lines** across all source files.
+
 ## Requirements
 
 - macOS 12.0 (Monterey) or later
 - Xcode Command Line Tools (for building)
+- Accessibility permission (for Teams keep-alive — prompted on first use)
 
 ## Donate
 
