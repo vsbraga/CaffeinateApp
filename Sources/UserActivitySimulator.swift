@@ -61,13 +61,13 @@ class UserActivitySimulator {
     }
 
     private static func postMouseEvent() {
-        let screenHeight = NSScreen.main?.frame.height ?? 0
-        let mousePos = NSEvent.mouseLocation
-        let point = CGPoint(x: mousePos.x, y: screenHeight - mousePos.y)
+        // CGEvent(source:nil).location gives current position in CG coords — no y-flip needed.
+        // Avoids cursor jump on secondary screens where NSScreen.main height is wrong.
+        guard let currentPos = CGEvent(source: nil)?.location else { return }
         guard let event = CGEvent(
             mouseEventSource: CGEventSource(stateID: .hidSystemState),
             mouseType: .mouseMoved,
-            mouseCursorPosition: point,
+            mouseCursorPosition: currentPos,
             mouseButton: .left
         ) else { return }
         event.post(tap: .cghidEventTap)
