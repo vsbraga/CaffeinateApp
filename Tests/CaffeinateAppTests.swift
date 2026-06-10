@@ -573,7 +573,7 @@ describe("AppDelegate: Integration") {
     it("applicationWillTerminate stops caffeinate") {
         let d = AppDelegate()
         d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
-        d.userActivitySimulator.requestPermission = { }
+        d.userActivitySimulator.declareActivity = { }
         d.caffeinateManager.start()
         try assertTrue(d.caffeinateManager.isActive)
         d.applicationWillTerminate(Notification(name: NSApplication.willTerminateNotification))
@@ -584,7 +584,7 @@ describe("AppDelegate: Integration") {
     it("caffeinate start activates user activity simulator") {
         let d = AppDelegate()
         d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
-        d.userActivitySimulator.requestPermission = { }
+        d.userActivitySimulator.declareActivity = { }
         try assertFalse(d.userActivitySimulator.isActive)
         d.caffeinateManager.start()
         try assertTrue(d.userActivitySimulator.isActive)
@@ -595,7 +595,7 @@ describe("AppDelegate: Integration") {
     it("caffeinate stop deactivates user activity simulator") {
         let d = AppDelegate()
         d.applicationDidFinishLaunching(Notification(name: NSApplication.didFinishLaunchingNotification))
-        d.userActivitySimulator.requestPermission = { }
+        d.userActivitySimulator.declareActivity = { }
         d.caffeinateManager.start()
         d.caffeinateManager.stop()
         try assertFalse(d.userActivitySimulator.isActive)
@@ -615,7 +615,7 @@ describe("UserActivitySimulator") {
 
     it("start sets isActive to true") {
         let s = UserActivitySimulator()
-        s.requestPermission = { }
+        s.declareActivity = { }
         s.start()
         try assertTrue(s.isActive)
         s.stop()
@@ -623,7 +623,7 @@ describe("UserActivitySimulator") {
 
     it("stop sets isActive to false") {
         let s = UserActivitySimulator()
-        s.requestPermission = { }
+        s.declareActivity = { }
         s.start()
         s.stop()
         try assertFalse(s.isActive)
@@ -631,7 +631,7 @@ describe("UserActivitySimulator") {
 
     it("start twice does not create duplicate timer") {
         let s = UserActivitySimulator()
-        s.requestPermission = { }
+        s.declareActivity = { }
         s.start()
         s.start()
         try assertTrue(s.isActive)
@@ -652,7 +652,7 @@ describe("UserActivitySimulator") {
 
     it("stop after start leaves isActive false") {
         let s = UserActivitySimulator()
-        s.requestPermission = { }
+        s.declareActivity = { }
         s.start()
         s.stop()
         try assertFalse(s.isActive)
@@ -664,79 +664,37 @@ describe("UserActivitySimulator") {
 // ============================================================
 
 describe("UserActivitySimulator: Branches") {
-    it("fires event immediately on start when trusted") {
+    it("fires declareActivity immediately on start") {
         let s = UserActivitySimulator()
         var fired = false
-        s.isTrusted = { true }
-        s.postEvent = { fired = true }
-        s.requestPermission = { }
+        s.declareActivity = { fired = true }
         s.start()
-        try assertTrue(fired, "Should fire event immediately when trusted")
+        try assertTrue(fired, "Should call declareActivity immediately on start")
         s.stop()
     }
 
-    it("does not fire event when not trusted") {
-        let s = UserActivitySimulator()
-        var fired = false
-        s.isTrusted = { false }
-        s.postEvent = { fired = true }
-        s.requestPermission = { }
-        s.start()
-        try assertFalse(fired, "Should not fire event when not trusted")
-        s.stop()
-    }
-
-    it("requests permission on start when not trusted") {
-        let s = UserActivitySimulator()
-        var requested = false
-        s.isTrusted = { false }
-        s.requestPermission = { requested = true }
-        s.postEvent = { }
-        s.start()
-        try assertTrue(requested, "Should request permission when not trusted")
-        s.stop()
-    }
-
-    it("does not request permission when already trusted") {
-        let s = UserActivitySimulator()
-        var requested = false
-        s.isTrusted = { true }
-        s.requestPermission = { requested = true }
-        s.postEvent = { }
-        s.start()
-        try assertFalse(requested, "Should not request permission when already trusted")
-        s.stop()
-    }
-
-    it("requests permission only once across multiple start/stop cycles") {
+    it("fires declareActivity exactly once on start (timer ticks not awaited)") {
         let s = UserActivitySimulator()
         var count = 0
-        s.isTrusted = { false }
-        s.requestPermission = { count += 1 }
-        s.postEvent = { }
-        s.start(); s.stop()
-        s.start(); s.stop()
-        s.start(); s.stop()
-        try assertEqual(count, 1, "Permission dialog should appear at most once per session")
-    }
-
-    it("timer fires event on each tick when trusted") {
-        let s = UserActivitySimulator()
-        var count = 0
-        s.isTrusted = { true }
-        s.postEvent = { count += 1 }
-        s.requestPermission = { }
+        s.declareActivity = { count += 1 }
         s.start()
-        // Immediate fire on start = 1
-        try assertEqual(count, 1, "Should fire exactly once on start (timer ticks not awaited)")
+        try assertEqual(count, 1, "Should fire exactly once on start")
         s.stop()
     }
 
-    it("trusted path then stop leaves isActive false") {
+    it("start twice fires declareActivity only once") {
         let s = UserActivitySimulator()
-        s.isTrusted = { true }
-        s.postEvent = { }
-        s.requestPermission = { }
+        var count = 0
+        s.declareActivity = { count += 1 }
+        s.start()
+        s.start()
+        try assertEqual(count, 1, "Second start is no-op, declareActivity fires once")
+        s.stop()
+    }
+
+    it("start then stop leaves isActive false") {
+        let s = UserActivitySimulator()
+        s.declareActivity = { }
         s.start()
         try assertTrue(s.isActive)
         s.stop()
@@ -749,25 +707,9 @@ describe("UserActivitySimulator: Branches") {
 // ============================================================
 
 describe("UserActivitySimulator: Default Closures") {
-    it("default postEvent runs without crashing (CGEventPost silently no-ops without accessibility)") {
+    it("default declareActivity runs without crashing") {
         let s = UserActivitySimulator()
-        s.isTrusted = { true }
-        s.requestPermission = { }
-        // Uses real postEvent — exercises CGEvent code path regardless of accessibility grant
         s.start()
-        s.stop()
-        try assertTrue(true)
-    }
-
-    it("default requestPermission dispatches async alert that dismisses cleanly") {
-        let s = UserActivitySimulator()
-        s.isTrusted = { false }
-        // Uses real requestPermission — dispatches NSAlert async
-        s.postEvent = { }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { NSApp.abortModal() }
-        s.start()
-        // Drain main queue so the async dispatch executes and the alert appears/dismisses
-        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
         s.stop()
         try assertTrue(true)
     }
